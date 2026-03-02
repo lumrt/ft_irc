@@ -6,16 +6,34 @@
 class Client
 {
 private:
-    int _fd;
-    std::string _nickname;
-    std::string _username;
-    std::string _buffer;
-    bool _registered;
+	int         _fd;
+	std::string _nickname;
+	std::string _username;
+	std::string _realname;
+	std::string _buffer;
+	bool        _passAccepted;
+	bool        _registered;
 
 public:
-    Client(int fd);
-    int getFd() const;
-    std::string &getBuffer(); // getter du messag envoye par le client
+	Client();
+	Client(int fd);
+	~Client();
+
+	int                getFd() const;
+	const std::string &getNickname() const;
+	const std::string &getUsername() const;
+	const std::string &getRealname() const;
+	std::string       &getBuffer();
+	bool               isPassAccepted() const;
+	bool               isRegistered() const;
+
+	void setNickname(const std::string &nickname);
+	void setUsername(const std::string &username);
+	void setRealname(const std::string &realname);
+	void setPassAccepted(bool accepted);
+	void setRegistered(bool registered);
+
+	std::string getPrefix() const;
 };
 
 #endif

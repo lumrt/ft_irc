@@ -4,9 +4,13 @@ CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
 SRC = src/main.cpp \
-      src/server.cpp \
-	  src/client.cpp \
-	  src/channel.cpp \
+      src/Server.cpp \
+      src/Client.cpp \
+      src/Channel.cpp \
+      src/Message.cpp \
+      src/commands/Pass.cpp \
+      src/commands/Nick.cpp \
+      src/commands/User.cpp
 
 INC = -Iinc
 
@@ -27,3 +31,5 @@ fclean: clean
 	rm -f $(NAME)
 
 re: fclean all
+
+.PHONY: all clean fclean re
