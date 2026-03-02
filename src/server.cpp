@@ -9,6 +9,16 @@
 
 #define MAX_CLIENTS 128
 
+#define RST  "\033[0m"
+#define BLD  "\033[1m"
+#define RED  "\033[1;31m"
+#define GRN  "\033[1;32m"
+#define YEL  "\033[1;33m"
+#define BLU  "\033[1;34m"
+#define MAG  "\033[1;35m"
+#define CYN  "\033[1;36m"
+#define GRY  "\033[0;90m"
+
 /* ================= CONSTRUCTORS ================= */
 
 Server::Server(int port, const std::string &password)
@@ -57,7 +67,7 @@ void Server::initSocket()
 	pfd.revents = 0;
 	_fds.push_back(pfd);
 
-	std::cout << "Server listening on port " << _port << std::endl;
+	std::cout << GRN << "Server listening on port " << _port << RST << std::endl;
 }
 
 /* ================= MAIN LOOP ================= */
@@ -101,12 +111,20 @@ void Server::acceptClient()
 	_fds.push_back(pfd);
 
 	_clients.insert(std::make_pair(clientFd, Client(clientFd)));
-	std::cout << "Client connected: fd " << clientFd << std::endl;
+	std::cout << BLU << "[+] " << RST << "Client connected "
+			  << GRY << "(fd " << clientFd << ", "
+			  << inet_ntoa(clientAddr.sin_addr) << ":"
+			  << ntohs(clientAddr.sin_port) << ")" << RST << std::endl;
 }
 
 void Server::disconnectClient(int fd)
 {
-	std::cout << "Client disconnected: fd " << fd << std::endl;
+	std::string nick = _clients[fd].getNickname();
+	std::cout << RED << "[-] " << RST << "Client disconnected "
+			  << GRY << "(fd " << fd;
+	if (!nick.empty())
+		std::cout << ", " << nick;
+	std::cout << ")" << RST << std::endl;
 
 	close(fd);
 	_clients.erase(fd);
@@ -177,7 +195,23 @@ void Server::handleLine(int fd, const std::string &line)
 	if (msg.command.empty())
 		return;
 
-	std::cout << "fd " << fd << " >> " << line << std::endl;
+	std::string nick = _clients[fd].getNickname();
+	std::string params;
+	for (size_t p = 0; p < msg.params.size(); ++p)
+	{
+		if (p > 0)
+			params += " ";
+		params += msg.params[p];
+	}
+	std::cout << CYN << ">> " << RST;
+	if (!nick.empty())
+		std::cout << BLD << nick << RST;
+	else
+		std::cout << GRY << "fd " << fd << RST;
+	std::cout << " " << GRY << msg.command << RST;
+	if (!params.empty())
+		std::cout << " " << params;
+	std::cout << std::endl;
 
 	if (msg.command == "CAP")
 		return;
@@ -226,6 +260,9 @@ void Server::tryRegister(int fd)
 		return;
 
 	client.setRegistered(true);
+	std::cout << GRN << "[*] " << RST << BLD << client.getNickname() << RST
+			  << " registered " << GRY << "(" << client.getUsername()
+			  << ", \"" << client.getRealname() << "\")" << RST << std::endl;
 	sendNumeric(fd, "001", ":Welcome to the IRC Network " + client.getPrefix());
 	sendNumeric(fd, "002", ":Your host is " SERVER_NAME ", running version 1.0");
 	sendNumeric(fd, "003", ":This server was created today");
