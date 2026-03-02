@@ -1,17 +1,15 @@
-includes/
-    Server.hpp
-    Client.hpp
-    Channel.hpp
-
+inc/
+    Message.hpp    (NEW)
+    Client.hpp     (UPDATED)
+    Channel.hpp    (COMPLETED)
+    Server.hpp     (UPDATED)
 src/
     main.cpp
-    Server.cpp
-    Client.cpp
+    Server.cpp     (IMPLEMENTED)
+    Client.cpp     (UPDATED)
     Channel.cpp
+    Message.cpp    (NEW)
     commands/
-        pass.cpp
-        nick.cpp
-        user.cpp
-        join.cpp
-        privmsg.cpp
-
+        Pass.cpp   (NEW)
+        Nick.cpp   (NEW)
+        User.cpp   (NEW)
