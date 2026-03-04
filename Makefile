@@ -10,7 +10,8 @@ SRC = src/main.cpp \
       src/Message.cpp \
       src/commands/Pass.cpp \
       src/commands/Nick.cpp \
-      src/commands/User.cpp
+      src/commands/User.cpp \
+      src/commands/Quit.cpp
 
 INC = -Iinc
 

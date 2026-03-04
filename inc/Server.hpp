@@ -29,7 +29,7 @@ private:
 	void acceptClient();
 	void receiveData(int fd);
 	void handleLine(int fd, const std::string &line);
-	void disconnectClient(int fd);
+	void disconnectClient(int fd, const std::string &reason);
 
 	void sendTo(int fd, const std::string &message);
 	void sendNumeric(int fd, const std::string &numeric, const std::string &text);
@@ -37,6 +37,7 @@ private:
 	void cmdPass(int fd, const Message &msg);
 	void cmdNick(int fd, const Message &msg);
 	void cmdUser(int fd, const Message &msg);
+	void cmdQuit(int fd, const Message &msg);
 
 	void    tryRegister(int fd);
 	Client *findClientByNick(const std::string &nickname);

@@ -117,14 +117,38 @@ void Server::acceptClient()
 			  << ntohs(clientAddr.sin_port) << ")" << RST << std::endl;
 }
 
-void Server::disconnectClient(int fd)
+void Server::disconnectClient(int fd, const std::string &reason)
 {
 	std::string nick = _clients[fd].getNickname();
-	std::cout << RED << "[-] " << RST << "Client disconnected "
-			  << GRY << "(fd " << fd;
+	std::string prefix = _clients[fd].getPrefix();
+
+	std::cout << RED << "[-] " << RST;
 	if (!nick.empty())
-		std::cout << ", " << nick;
-	std::cout << ")" << RST << std::endl;
+		std::cout << BLD << nick << RST;
+	else
+		std::cout << GRY << "fd " << fd << RST;
+	std::cout << " quit " << GRY << "(" << reason << ")" << RST << std::endl;
+
+	std::string quitMsg = ":" + prefix + " QUIT :" + reason;
+	for (std::map<std::string, Channel>::iterator it = _channels.begin();
+		 it != _channels.end(); )
+	{
+		if (it->second.hasMember(fd))
+		{
+			const std::set<int> &members = it->second.getMembers();
+			for (std::set<int>::const_iterator m = members.begin();
+				 m != members.end(); ++m)
+			{
+				if (*m != fd)
+					sendTo(*m, quitMsg);
+			}
+			it->second.removeMember(fd);
+		}
+		if (it->second.empty())
+			_channels.erase(it++);
+		else
+			++it;
+	}
 
 	close(fd);
 	_clients.erase(fd);
@@ -137,16 +161,6 @@ void Server::disconnectClient(int fd)
 			break;
 		}
 	}
-
-	for (std::map<std::string, Channel>::iterator it = _channels.begin();
-		 it != _channels.end(); )
-	{
-		it->second.removeMember(fd);
-		if (it->second.empty())
-			_channels.erase(it++);
-		else
-			++it;
-	}
 }
 
 /* ================= DATA RECEPTION & BUFFERING ================= */
@@ -158,7 +172,7 @@ void Server::receiveData(int fd)
 
 	if (bytes <= 0)
 	{
-		disconnectClient(fd);
+		disconnectClient(fd, "Connection lost");
 		return;
 	}
 	buf[bytes] = '\0';
@@ -215,6 +229,8 @@ void Server::handleLine(int fd, const std::string &line)
 
 	if (msg.command == "CAP")
 		return;
+	if (msg.command == "QUIT")
+		return cmdQuit(fd, msg);
 	if (msg.command == "PASS")
 		return cmdPass(fd, msg);
 	if (msg.command == "NICK")
