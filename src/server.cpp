@@ -19,6 +19,14 @@
 #define CYN  "\033[1;36m"
 #define GRY  "\033[0;90m"
 
+volatile sig_atomic_t Server::_running = 1;
+
+void Server::signalHandler(int sig)
+{
+	(void)sig;
+	_running = 0;
+}
+
 /* ================= CONSTRUCTORS ================= */
 
 Server::Server(int port, const std::string &password)
@@ -74,10 +82,20 @@ void Server::initSocket()
 
 void Server::run()
 {
-	while (true)
+	signal(SIGINT, signalHandler);
+	signal(SIGTERM, signalHandler);
+	signal(SIGPIPE, SIG_IGN);
+
+	while (_running)
 	{
 		if (poll(&_fds[0], _fds.size(), -1) < 0)
+		{
+			if (errno == EINTR)
+				continue;
+			if (!_running)
+				break;
 			throw std::runtime_error("poll() failed");
+		}
 
 		for (size_t i = 0; i < _fds.size(); ++i)
 		{
@@ -90,6 +108,7 @@ void Server::run()
 			}
 		}
 	}
+	std::cout << "\n" << GRN << "Server shutting down" << RST << std::endl;
 }
 
 /* ================= CONNECTION ================= */
@@ -178,7 +197,6 @@ void Server::receiveData(int fd)
 	buf[bytes] = '\0';
 	_clients[fd].getBuffer().append(buf);
 
-	// Extract all complete lines before processing to avoid dangling refs
 	std::string             &buffer = _clients[fd].getBuffer();
 	std::string::size_type   pos;
 	std::vector<std::string> lines;
@@ -241,7 +259,28 @@ void Server::handleLine(int fd, const std::string &line)
 	if (!_clients[fd].isRegistered())
 		return sendNumeric(fd, "451", ":You have not registered");
 
-	// Future commands (JOIN, PRIVMSG, KICK, etc.) dispatched here
+	if (msg.command == "PING")
+		return cmdPing(fd, msg);
+	if (msg.command == "PONG")
+		return;
+	if (msg.command == "JOIN")
+		return cmdJoin(fd, msg);
+	if (msg.command == "PART")
+		return cmdPart(fd, msg);
+	if (msg.command == "PRIVMSG")
+		return cmdPrivmsg(fd, msg);
+	if (msg.command == "NOTICE")
+		return cmdNotice(fd, msg);
+	if (msg.command == "KICK")
+		return cmdKick(fd, msg);
+	if (msg.command == "INVITE")
+		return cmdInvite(fd, msg);
+	if (msg.command == "TOPIC")
+		return cmdTopic(fd, msg);
+	if (msg.command == "MODE")
+		return cmdMode(fd, msg);
+	if (msg.command == "WHO")
+		return cmdWho(fd, msg);
 }
 
 /* ================= SENDING ================= */
@@ -258,6 +297,35 @@ void Server::sendNumeric(int fd, const std::string &numeric, const std::string &
 	if (target.empty())
 		target = "*";
 	sendTo(fd, std::string(":") + SERVER_NAME + " " + numeric + " " + target + " " + text);
+}
+
+void Server::broadcastToChannel(const std::string &channel, const std::string &message, int excludeFd)
+{
+	if (_channels.find(channel) == _channels.end())
+		return;
+	const std::set<int> &members = _channels[channel].getMembers();
+	for (std::set<int>::const_iterator it = members.begin(); it != members.end(); ++it)
+	{
+		if (*it != excludeFd)
+			sendTo(*it, message);
+	}
+}
+
+void Server::sendChannelInfo(int fd, Channel &chan)
+{
+	if (!chan.getTopic().empty())
+		sendNumeric(fd, "332", chan.getName() + " :" + chan.getTopic());
+
+	std::string names;
+	const std::set<int> &members = chan.getMembers();
+	for (std::set<int>::const_iterator it = members.begin(); it != members.end(); ++it)
+	{
+		if (!names.empty()) names += " ";
+		if (chan.isOperator(*it)) names += "@";
+		names += _clients[*it].getNickname();
+	}
+	sendNumeric(fd, "353", "= " + chan.getName() + " :" + names);
+	sendNumeric(fd, "366", chan.getName() + " :End of /NAMES list");
 }
 
 /* ================= REGISTRATION ================= */
@@ -282,7 +350,7 @@ void Server::tryRegister(int fd)
 	sendNumeric(fd, "001", ":Welcome to the IRC Network " + client.getPrefix());
 	sendNumeric(fd, "002", ":Your host is " SERVER_NAME ", running version 1.0");
 	sendNumeric(fd, "003", ":This server was created today");
-	sendNumeric(fd, "004", SERVER_NAME " 1.0 o o");
+	sendNumeric(fd, "004", SERVER_NAME " 1.0 itkol itkol");
 }
 
 /* ================= LOOKUP ================= */

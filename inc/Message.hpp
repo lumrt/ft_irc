@@ -11,6 +11,7 @@ struct Message
 	std::vector<std::string> params;
 };
 
-Message parseMessage(const std::string &raw);
+Message                      parseMessage(const std::string &raw);
+std::vector<std::string>     splitList(const std::string &s, char delim);
 
 #endif

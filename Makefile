@@ -11,7 +11,17 @@ SRC = src/main.cpp \
       src/commands/Pass.cpp \
       src/commands/Nick.cpp \
       src/commands/User.cpp \
-      src/commands/Quit.cpp
+      src/commands/Quit.cpp \
+      src/commands/Join.cpp \
+      src/commands/Part.cpp \
+      src/commands/Privmsg.cpp \
+      src/commands/Notice.cpp \
+      src/commands/Kick.cpp \
+      src/commands/Invite.cpp \
+      src/commands/Topic.cpp \
+      src/commands/Mode.cpp \
+      src/commands/Ping.cpp \
+      src/commands/Who.cpp
 
 INC = -Iinc
 

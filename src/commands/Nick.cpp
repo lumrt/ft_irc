@@ -1,8 +1,5 @@
 #include "Server.hpp"
-
-// ERR_NONICKNAMEGIVEN (431)
-// ERR_ERRONEUSNICKNAME (432)
-// ERR_NICKNAMEINUSE (433)
+#include <set>
 
 static bool isValidNick(const std::string &nick)
 {
@@ -42,13 +39,28 @@ void Server::cmdNick(int fd, const Message &msg)
 	if (existing && existing->getFd() != fd)
 		return sendNumeric(fd, "433", nick + " :Nickname is already in use");
 
+	std::string oldPrefix = client.getPrefix();
 	std::string oldNick = client.getNickname();
 	client.setNickname(nick);
 
 	if (client.isRegistered())
 	{
-		std::string prefix = oldNick.empty() ? nick : oldNick;
-		sendTo(fd, ":" + prefix + " NICK " + nick);
+		std::string nickMsg = ":" + (oldNick.empty() ? nick : oldPrefix) + " NICK " + nick;
+
+		std::set<int> notified;
+		notified.insert(fd);
+		for (std::map<std::string, Channel>::iterator it = _channels.begin();
+			 it != _channels.end(); ++it)
+		{
+			if (it->second.hasMember(fd))
+			{
+				const std::set<int> &members = it->second.getMembers();
+				notified.insert(members.begin(), members.end());
+			}
+		}
+		for (std::set<int>::const_iterator it = notified.begin();
+			 it != notified.end(); ++it)
+			sendTo(*it, nickMsg);
 	}
 	else
 		tryRegister(fd);
