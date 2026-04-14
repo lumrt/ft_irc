@@ -215,6 +215,11 @@ void Server::receiveData(int fd)
 		if (!line.empty())
 			lines.push_back(line);
 	}
+	if (buffer.size() > 510)
+	{
+		sendNumeric(fd, "417", ":Input line was too long");
+		buffer.clear();
+	}
 
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
@@ -293,7 +298,22 @@ void Server::handleLine(int fd, const std::string &line)
 void Server::sendTo(int fd, const std::string &message)
 {
 	std::string full = message + "\r\n";
-	send(fd, full.c_str(), full.size(), 0);
+	const char *ptr = full.c_str();
+	size_t      remaining = full.size();
+
+	while (remaining > 0)
+	{
+		ssize_t sent = send(fd, ptr, remaining, 0);
+		if (sent < 0)
+		{
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				continue;
+			std::cerr << RED << "send() failed for fd " << fd << RST << std::endl;
+			return;
+		}
+		ptr += sent;
+		remaining -= sent;
+	}
 }
 
 void Server::sendNumeric(int fd, const std::string &numeric, const std::string &text)
