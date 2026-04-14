@@ -106,6 +106,11 @@ void Server::run()
 				else
 					receiveData(_fds[i].fd);
 			}
+			else if (_fds[i].fd != _serverSocket
+				&& (_fds[i].revents & (POLLHUP | POLLERR)))
+			{
+				disconnectClient(_fds[i].fd, "Connection error");
+			}
 		}
 	}
 	std::cout << "\n" << GRN << "Server shutting down" << RST << std::endl;
